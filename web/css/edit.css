@@ -59,15 +59,6 @@ button:hover {
   margin: 1em 1em 0 0;
 }
 
-/* .user_inputs {
-  margin-top: 10%;
-} */
-
-/* .user_inputs input {
-  display: block;
-  margin-top: 1px;
-} */
-
 .gap_me {
   margin-top: 3px;
 }
@@ -126,67 +117,7 @@ td {
   font-weight: bold;
 }
 
-/* table-layout: fixed;
-width: 70%;
-word-wrap: break-word; */
-
-/* padding: 2em;
-display: grid;
-grid-template-columns: repeat(5, 1fr);
-gap: 1em; */
-
-.card {
-  background: var(--primary);
-  padding: 1em;
-  color: var(--bg);
-  max-width: 400px;
-  word-wrap: break-word;
-  border-radius: 5px;
-  border: ridge 2px var(--dark-green);
-  transition: 0.2s ease;
-  position: relative;
-}
-
-.card:hover {
-  transform: scale(1.1);
-}
-
-.inner-div {
-  margin-top: 1em;
-  display: grid;
-}
-
-.card label {
-  font-size: 0.8rem;
-}
-
-.expired {
-  display: flex;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  justify-content: center;
-  flex-direction: column;
-  background-color: rgba(1, 1, 1, 0.25);
-}
-
-.expired h1 {
-  transform: rotate(-25deg);
-  margin: auto;
-  color: red;
-}
-
-.not-expired {
-  display: none;
-}
-
 /* POPUP */
-#add-user-popup {
-  display: none;
-}
-
 #login-popup {
   display: none;
 }
@@ -251,36 +182,4 @@ gap: 1em; */
 .popup-container input[type="submit"]:hover {
   opacity: 0.85;
   cursor: pointer;
-}
-
-.grow-wrap {
-  /* easy way to plop the elements on top of each other and have them both sized based on the tallest one's height */
-  display: grid;
-}
-.grow-wrap::after {
-  /* Note the weird space! Needed to prevent jumpy behavior */
-  content: attr(data-replicated-value) " ";
-
-  /* This is how textarea text behaves */
-  white-space: pre-wrap;
-
-  /* Hidden from view, clicks, and screen readers */
-  visibility: hidden;
-}
-.grow-wrap > textarea {
-  /* You could leave this, but after a user resizes, then it ruins the auto sizing */
-  resize: none;
-
-  /* Firefox shows scrollbar on growth, you can hide like this. */
-  overflow: hidden;
-}
-.grow-wrap > textarea,
-.grow-wrap::after {
-  /* Identical styling required!! */
-  border: 1px solid black;
-  padding: 0.5rem;
-  font: inherit;
-
-  /* Place on top of each other */
-  grid-area: 1 / 1 / 2 / 2;
 }

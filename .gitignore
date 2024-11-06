@@ -1,0 +1,4 @@
+.idea
+*__pycache__
+config.env
+/Schwab-Token.code-workspace

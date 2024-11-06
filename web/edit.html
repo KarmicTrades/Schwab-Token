@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="css/edit.css" />
+    <title>Schwab Token</title>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h5>Edit Schwab User</h5>
+      </header>
+
+      <div class="container">
+        <div id="button-container">
+          <button id="no-save-exit-btn">Exit without Save</button>
+          <button id="save-user-btn">Save User & Exit</button>
+          <button id="update-user-btn">Save, Update Tokens & Accounts</button>
+        </div>
+
+        <!-- DISPLAY USER INFO -->
+        <div id="user-container"></div>
+      </div>
+    </main>
+
+    <!-- ADD/UPDATE ACCOUNT POPUP -->
+    <div id="login-popup" class="popup">
+      <div class="popup-container">
+        <div>
+          <h5>Update Account</h5>
+          <button id="exit-login-popup">
+            Exit
+          </button>
+        </div>
+        <p>
+          For updating tokens and accounts.
+        </p>
+        <form  id="login_form">
+          <label for="Username">Schwab UserName:</label>
+          <input
+            type="text" id="Username" name="Username" autocomplete="off"
+            placeholder="Enter Username for Schwab Brokerage Account"
+            class="gap_me"
+          />
+          <br>
+          <label for="Password">Schwab Password:</label>
+          <input
+            type="password" id="Password" name="Password" autocomplete="off"
+            placeholder="Enter Password for Schwab Brokerage Account"
+            class="gap_me" oninput="check_pass()"
+          />
+          <p class="password_warning">PASSWORDS DO NOT MATCH</p>
+          <label for="Confirm_Password">Confirm Password:</label>
+          <input
+            type="password" id="Confirm_Password" name="Confirm_Password"
+            placeholder="Confirm Password"
+            class="gap_me" oninput="check_pass()"
+          />
+          <br>
+          <input
+            type="submit"
+            value="Submit"
+            id="login-save-btn"
+          />
+        </form>
+      </div>
+    </div>
+
+    <script type="text/javascript" src="/eel.js"></script>
+    <script type="text/javascript" src="js/edit.js"></script>
+  </body>
+</html>

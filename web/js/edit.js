@@ -280,7 +280,7 @@ function fetch_user(user) {
       <b>
       <p>===================================================================</p>
       <p>THE FOLLOWING INFORMATION IS RETRIEVED FROM SCHWAB.</p>
-      <p>IF YOU ALREADY HAVE TOKENS, YOU MAY ENTER THEM HERE.</p>
+      <p>YOU MAY ENTER EXISTING INFO, BUT IT IS REFRESHED WHEN RETRIEVING ACCOUNTS.</p>
       </b>
       <br>
       <label for="token_scope">Token Scope:</label>

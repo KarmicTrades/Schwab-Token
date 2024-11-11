@@ -7,12 +7,12 @@ Schwab_user = {
         "appSecret": "appSecret from Schwab Dev",
         "callbackURL": "https://127.0.0.1:8182",
         "token": {
-            "access_expiry": seconds since epoch,
+            "access_expiry": 1731286143,  # seconds since epoch,
             "access_token": "coded fleeting passport",
             "refresh_token": "coded phoenix catalyst",
             "token_type": "Bearer",
             "scope": "api",
-            "refresh_expiry": seconds since epoch
+            "refresh_expiry": 1731890943,  # seconds since epoch
         }
     },
     "Accounts": {

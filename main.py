@@ -24,7 +24,7 @@ def sort_accounts(accounts):
 
         formatted_account[acct] = {
             "Active": accounts[acct].get("Active", True),
-            "account_hash": accounts[acct].get("account_hash"),  # default = None
+            "account_hash": accounts[acct].get("account_hash"),  # default=None
             "Account_Position": accounts[acct].get("Account_Position", "Paper"),
             "Archive": accounts[acct].get("Archive", False)
         }
@@ -371,7 +371,8 @@ def fetch_tokens_and_accounts(form_data):
 
             return
 
-        # Get user so that we can update accounts, keeping archived accounts in-tact
+        # Get user so that we can update accounts,
+        # keeping archived accounts in-tact
         user = mongo.users.find_one({"Name": form_data["Name"]})
 
         current_acct_nums = []

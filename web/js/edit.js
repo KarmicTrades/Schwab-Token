@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // GET BUTTONS
   let exit_button = document.querySelector("#no-save-exit-btn");
   let save_user_button = document.querySelector("#save-user-btn");
+  let update_tokens_button = document.querySelector("#update-tokens-btn");
   let update_user_button = document.querySelector("#update-user-btn");
   let login_save_button = document.querySelector("#login-save-btn");
   let exit_login_popup = document.querySelector("#exit-login-popup");
@@ -20,7 +21,8 @@ document.addEventListener("DOMContentLoaded", function () {
   exit_login_popup.addEventListener("click", close_popup); // Cancels the login
 
   // FETCH TOKENS & ACCOUNTS
-  login_save_button.addEventListener("click", send_form_data); // Saves after
+  update_tokens_button.addEventListener("click", update_tokens); // Saves after
+  login_save_button.addEventListener("click", update_user_and_tokens); // Saves after
 });
 
 function get_parameter_by_name(name, url) {
@@ -82,7 +84,6 @@ function save_the_user() {
   return "Success";
 }
 
-
 function save_and_exit() {
 // Saves. And exits.
 
@@ -120,7 +121,22 @@ function close_popup(e) {
   }
 }
 
-function send_form_data(e) {
+function update_tokens(e) {
+// Send the user data to Python to fetch tokens and accounts
+
+  e.preventDefault();
+
+  // Collect user info
+  var user_data = collect_form_data("user_form");
+
+  // Send user data for Python to contact Schwab for tokens and accounts
+  eel.fetch_tokens_and_accounts(user_data);
+
+  // Refresh "Edit User" page to display new tokens and accounts
+  eel.call_user(user_data["Name"]);
+}
+
+function update_user_and_tokens(e) {
 // Send the user data to Python to fetch tokens and accounts
 
   e.preventDefault();
@@ -210,7 +226,17 @@ function fetch_user(user) {
 
   // Initialize
   let refresh_expired = false;
+
   let access_expired = false;
+
+  if ("Passcode" in user) {
+
+    if (user["Passcode"] !== "Too many secrets") {
+
+      let update_tokens_btn = document.getElementById("update-tokens-btn")
+      update_tokens_btn.style.display = "inline-block";
+    }
+  }
 
   // Convert seconds since epoch to milliseconds since epoch
   let refresh_expires = 1000 *
@@ -340,10 +366,6 @@ function fetch_user(user) {
 
   // Accounts are listed as well
   let accounts = user["Accounts"];
-
-  // const keys = Object.keys(accounts);
-
-  // keys.forEach(acct => {
 
   user["sort_order"].forEach(acct => {
 

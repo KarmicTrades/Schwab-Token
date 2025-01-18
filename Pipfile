@@ -13,6 +13,7 @@ selenium = "*"
 undetected-chromedriver = "*"
 requests = "*"
 bcrypt = "*"
+cryptography = "*"
 
 [dev-packages]
 

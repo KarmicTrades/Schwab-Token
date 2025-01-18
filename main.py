@@ -1,11 +1,19 @@
+import os
+from dotenv import load_dotenv
 import eel
 from schwab import initialize_tokens, get_accounts
-from encrypt_password import encrypt_password
+from encrypt_password import hash_password, encrypt_message, decrypt_message
 from mongo import MongoDB
 from dateutil import parser
 import time
 import traceback
 
+
+ENV_FILE = "config.env"
+
+load_dotenv(dotenv_path=ENV_FILE)
+
+PASSPORT = os.getenv("PASSPORT")
 
 eel.init("web")
 
@@ -198,12 +206,14 @@ def user_cleanup(user):
             "deviceID": "from PushSafer"
         },  # User won't see this unless they look for the default values
         "Username": "My voice is my passport",
-        "Password": "Verify me"  # Setec Astronomy might come knocking. Shh!
+        "Password": "Verify me",  # Setec Astronomy might come knocking. Shh!
+        "Passcode": "Too many secrets",  # The answering machine will crack them
+        "Electrolytes": "Little Black Box"  # Between the pencil jar and the lamp
     }
 
     # Merge user template above with existing user dictionary
     # "user" dictionary for a new user is empty, so default values are kept
-    user = {**new_user, **user}
+    user: dict = {**new_user, **user}
 
     # If user dictionary is original version, update old fields as necessary
     if "deviceID" in user_keys:
@@ -256,7 +266,9 @@ def save_user(form_data):
             "deviceID": form_data["Device_ID"]
         },  # User has not yet entered login info
         "Username": "My voice is my passport",  # keeping Setec Astronomy at bay
-        "Password": "Verify me"  # The cocktail party is just around the bend
+        "Password": "Verify me",  # The cocktail party is just around the bend
+        "Passcode": "Too many secrets",  # Playtronics blueprints for 50 bucks
+        "Electrolytes": "Little Black Box"  # Between the pencil jar and the lamp
     }
 
     accounts = {}
@@ -296,11 +308,17 @@ def save_user(form_data):
         # Retrieve existing user
         user = mongo.users.find_one({"Name": old_name})
 
-        # Retrieve existing username and password
+        # Retrieve existing username and hashed password
         if "Username" in user.keys():
             new_user_data["Username"] = user["Username"]
 
             new_user_data["Password"] = user["Password"]
+
+        # Retrieve existing encrypted password
+        if "Passcode" in user.keys():
+            new_user_data["Passcode"] = user["Passcode"]
+
+            new_user_data["Electrolytes"] = user["Electrolytes"]
 
         # If we have existing accounts, merge with new ones, if any
         if "Accounts" in user.keys():
@@ -332,6 +350,23 @@ def fetch_tokens_and_accounts(form_data):
     # noinspection PyBroadException
 
     try:
+        # If we're not updating username/password, retrieve them from MongoDB
+        if "Username" in form_data.keys():
+
+            update_login = True
+
+        else:
+
+            update_login = False
+
+            user_data = mongo.users.find_one({"Name": form_data["Name"]})
+
+            form_data["Username"] = user_data["Username"]
+
+            form_data["Password"] = decrypt_message(user_data["Passcode"],
+                                                    PASSPORT,
+                                                    user_data["Electrolytes"])
+
         # SEND DATA TO SCHWAB OBJECT TO GET TOKENS
         token_data = initialize_tokens(form_data)
 
@@ -355,12 +390,26 @@ def fetch_tokens_and_accounts(form_data):
         }
 
         # SAVE TO MONGO.
-        mongo.users.update_one(
-            {"Name": form_data["Name"]},
-            {"$set": {"api_application.token": token,
-                      "Username": token_data["Username"],  # No more secrets
-                      "Password": encrypt_password(token_data["Password"])}}
-        )
+        if update_login:
+
+            passcode, electrolytes = encrypt_message(token_data["Password"],
+                                                     PASSPORT)
+
+            mongo.users.update_one(
+                {"Name": form_data["Name"]},
+                {"$set": {"api_application.token": token,
+                          "Username": token_data["Username"],  # No more secrets
+                          "Password": hash_password(token_data["Password"]),
+                          "Passcode": passcode,
+                          "Electrolytes": electrolytes}}
+            )
+
+        else:
+
+            mongo.users.update_one(
+                {"Name": form_data["Name"]},
+                {"$set": {"api_application.token": token}}
+            )
 
         # Fetch account numbers and hashes from Schwab API
         accounts_data = get_accounts(token["access_token"], token["token_type"])
@@ -410,7 +459,7 @@ def fetch_tokens_and_accounts(form_data):
             {"$set": {"Accounts": user_accts}},
         )
 
-        action = "Tokens and Accounts retrieved!"
+        action = "Tokens and Accounts retrieved and SAVED!"
 
         eel.response({"success": action})
 

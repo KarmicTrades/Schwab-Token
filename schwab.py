@@ -134,7 +134,7 @@ def initialize_tokens(form_data):
 
         query = up.urlparse(uri).query
 
-        params = dict(up.parse_qsl(query))
+        params: dict = dict(up.parse_qsl(query))
 
         # We need the code to fetch tokens
         if 'code' not in params:

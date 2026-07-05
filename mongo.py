@@ -12,6 +12,14 @@ MONGO_URI = os.getenv("MONGO_URI")
 
 class MongoDB:
 
+    def __init__(self):
+
+        self.active = True if MONGO_URI else False
+
+        if self.active:
+
+                self.connect_mongo()
+
     def connect_mongo(self):
 
         try:

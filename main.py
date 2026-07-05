@@ -2,8 +2,9 @@ import os
 from dotenv import load_dotenv
 import eel
 from schwab import initialize_tokens, get_accounts
-from encrypt_password import hash_password, encrypt_message, decrypt_message
+from encryption import hash_password, encrypt_message, decrypt_message
 from mongo import MongoDB
+from users import Users
 from dateutil import parser
 import time
 import traceback
@@ -19,8 +20,7 @@ eel.init("web")
 
 mongo = MongoDB()
 
-mongo.connect_mongo()
-
+users_obj = Users()
 
 def sort_accounts(accounts):
     # Sort accounts in groups: [not-archived: [active -> inactive]] -> archived
@@ -268,7 +268,7 @@ def save_user(form_data):
         "Username": "My voice is my passport",  # keeping Setec Astronomy at bay
         "Password": "Verify me",  # The cocktail party is just around the bend
         "Passcode": "Too many secrets",  # Playtronics blueprints for 50 bucks
-        "Electrolytes": "Little Black Box"  # Between the pencil jar and the lamp
+        "Electrolytes": "Little Black Box"  # Between the pencil jar and lamp
     }
 
     accounts = {}
@@ -306,7 +306,7 @@ def save_user(form_data):
         old_name = form_data["old_name"]
 
         # Retrieve existing user
-        user = mongo.users.find_one({"Name": old_name})
+        user = users_obj.users[form_data["_id"]]
 
         # Retrieve existing username and hashed password
         if "Username" in user.keys():
@@ -322,6 +322,7 @@ def save_user(form_data):
 
         # If we have existing accounts, merge with new ones, if any
         if "Accounts" in user.keys():
+
             new_user_data["Accounts"] = merge_accounts(
                 user["Accounts"], new_user_data["Accounts"])
 
@@ -333,12 +334,27 @@ def save_user(form_data):
     new_user_data["Accounts"], sort_order = sort_accounts(
         new_user_data["Accounts"])
 
-    # Save it to Mongo
-    mongo.users.update_one(
-        {"Name": old_name},
-        {"$set": new_user_data},
-        upsert=True
-    )
+    if "cleaned" in new_user_data.keys():
+
+        del new_user_data["cleaned"]
+
+    if "sort_order" in new_user_data.keys():
+
+        del new_user_data["sort_order"]
+
+    # Save user to local folders
+    users_obj.save_user(new_user_data)
+
+    # Save user to Mongo
+    if mongo.active:
+
+        del new_user_data["_id"]
+
+        mongo.users.update_one(
+            {"Name": old_name},
+            {"$set": new_user_data},
+            upsert=True
+        )
 
     return
 
@@ -359,7 +375,7 @@ def fetch_tokens_and_accounts(form_data):
 
             update_login = False
 
-            user_data = mongo.users.find_one({"Name": form_data["Name"]})
+            user_data = users_obj.users[form_data["_id"]]
 
             form_data["Username"] = user_data["Username"]
 
@@ -373,6 +389,7 @@ def fetch_tokens_and_accounts(form_data):
         if "error" in token_data:
             # IF ERROR, THEN RETURN ERROR TO JS AND DISPLAY TO USER
             eel.response({"error": token_data["error"]})
+            print(token_data["error"])
 
             return
 
@@ -389,27 +406,35 @@ def fetch_tokens_and_accounts(form_data):
             "refresh_expiry": epoch_seconds + 604800  # 7 days from current time
         }
 
-        # SAVE TO MONGO.
+        user = users_obj.users[form_data['_id']]
+
+        # Update token and Username/Password if necessary
         if update_login:
 
             passcode, electrolytes = encrypt_message(token_data["Password"],
                                                      PASSPORT)
 
-            mongo.users.update_one(
-                {"Name": form_data["Name"]},
-                {"$set": {"api_application.token": token,
-                          "Username": token_data["Username"],  # No more secrets
-                          "Password": hash_password(token_data["Password"]),
-                          "Passcode": passcode,
-                          "Electrolytes": electrolytes}}
-            )
+            new_data = [
+                ("Username", token_data["Username"]),  # No more secrets
+                ("Password", hash_password(token_data["Password"])),
+                ("Passcode", passcode),
+                ("Electrolytes", electrolytes)
+                ]
 
-        else:
+            # Merge with existing user_obj
+            user.update(new_data)
 
-            mongo.users.update_one(
-                {"Name": form_data["Name"]},
-                {"$set": {"api_application.token": token}}
-            )
+        user['api_application']['token'] = token
+
+        # SAVE TO LOCAL FOLDERS
+        users_obj.save_user(user)
+
+        # SAVE TO MONGO
+        if mongo.active:
+
+            del user['_id']
+
+            mongo.users.replace_one({"Name": user["Name"]}, user)
 
         # Fetch account numbers and hashes from Schwab API
         accounts_data = get_accounts(token["access_token"], token["token_type"])
@@ -422,7 +447,7 @@ def fetch_tokens_and_accounts(form_data):
 
         # Get user so that we can update accounts,
         # keeping archived accounts in-tact
-        user = mongo.users.find_one({"Name": form_data["Name"]})
+        # user = users_obj.users[form_data["_id"]]
 
         current_acct_nums = []
 
@@ -436,6 +461,7 @@ def fetch_tokens_and_accounts(form_data):
             current_acct_nums.append(acct_num)
 
             if acct_num not in user["Accounts"].keys():
+
                 user["Accounts"][acct_num] = {}
 
             user["Accounts"][acct_num]["account_hash"] = acct["hashValue"]
@@ -453,11 +479,19 @@ def fetch_tokens_and_accounts(form_data):
 
                 user_accts[acct]["Active"] = False
 
-        # SAVE TO MONGO.
-        mongo.users.update_one(
-            {"Name": form_data["Name"]},
-            {"$set": {"Accounts": user_accts}},
-        )
+        # Update existing user_obj
+        users_obj.users[form_data['_id']]["Accounts"] = user_accts
+
+        # SAVE TO LOCAL FOLDERS
+        users_obj.save_user(users_obj.users[form_data['_id']])
+
+        # SAVE TO MONGO
+        if mongo.active:
+
+            mongo.users.update_one(
+                {"Name": form_data["Name"]},
+                {"$set": {"Accounts": user_accts}},
+            )
 
         action = "Tokens and Accounts retrieved and SAVED!"
 
@@ -491,11 +525,21 @@ def is_inactive(user):
 def call_users():
     # FETCH ALL USERS AND SEND TO JS TO BE DISPLAYED
 
-    users = [user for user in mongo.users.find()]
+    if mongo.active:
+
+        users = [user for user in mongo.users.find()]
+
+        for user in users:
+
+            users_obj.save_user(user)
+
+    else:
+
+        users = users_obj.users
 
     new_users = []
 
-    for user in users:
+    for user in users.values():
 
         # In previous version, "TDA_user" was near carbon-copy of original user.
         # That went away. Clean it and merge with new user dictionary.
@@ -513,6 +557,7 @@ def call_users():
                 # keep fields we don't control. That is, if tda_user has a
                 # field we're not aware of, we need to keep it
                 if new_tda_user["Accounts"]:
+
                     user["Accounts"] = merge_accounts(
                         new_tda_user["Accounts"], user.get("Accounts", {}))
 
@@ -526,10 +571,12 @@ def call_users():
             for old_key in old_keys:
 
                 if old_key in new_tda_user_keys:
+
                     del new_tda_user[old_key]
 
             # If user stored extra fields in user object, keep them
             if new_tda_user:
+
                 user = {**user, **new_tda_user}
 
         # Now clean the merged/current user dictionary
@@ -537,11 +584,16 @@ def call_users():
 
         new_users.append(new_user)
 
-        # If we cleaned it, delete "cleaned" field and save user to Mongo
+        # If we cleaned it, delete "cleaned" field and save user
         if new_user["cleaned"]:
+
             del new_user["cleaned"]
 
-            mongo.users.replace_one({"_id": new_user["_id"]}, new_user)
+            users_obj.save_user(new_user)
+
+            if mongo.active:
+
+                mongo.users.replace_one({"_id": new_user["_id"]}, new_user)
 
     # Users with no active accounts are sorted to display at end
     # Order of users in MongoDB is not changed
@@ -554,10 +606,13 @@ def call_users():
 @eel.expose
 def call_user(user_name):
     # FETCH USER AND SEND TO JS TO BE DISPLAYED
-    user = mongo.users.find_one({"Name": user_name})
+    if user_name:
 
-    # Creates default values for new user
-    if not user:
+        user = users_obj.users[users_obj.user_names[user_name]]
+
+    else:
+
+        # Creates default values for new user
         user = {}
 
         user = user_cleanup(user)

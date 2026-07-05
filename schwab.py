@@ -41,6 +41,8 @@ def initialize_tokens(form_data):
             "prefs", {"credentials_enable_service": False,
                       "profile.password_manager_enabled": False})
 
+        options.binary_location = r"C:\Program Files\Google\Chrome Beta\Application\chrome.exe"
+
         driver = uc.Chrome(options=options, use_subprocess=False)
 
         client_id = form_data["Client_ID"]

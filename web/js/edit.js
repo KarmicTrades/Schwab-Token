@@ -264,6 +264,10 @@ function fetch_user(user) {
   elements += `
     <form class="user_inputs" id="user_form">
       <input
+        type="hidden" id="_id" name="_id"
+        value="${user["_id"]}"
+      />
+      <input
         type="hidden" id="old_name" name="old_name"
         value="${user["Name"]}"
       />
